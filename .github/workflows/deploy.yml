@@ -26,7 +26,10 @@ jobs:
         run: npm run build
         working-directory: project/frontend
         env:
-          VITE_API_URL: ${{ secrets.VITE_API_URL }}
+          VITE_API_URL: https://interviewiq-production-e6c9.up.railway.app/api
+
+      - name: Copy index.html to 404.html for SPA routing
+        run: cp project/frontend/dist/index.html project/frontend/dist/404.html
 
       - name: Deploy to gh-pages
         uses: peaceiris/actions-gh-pages@v4
