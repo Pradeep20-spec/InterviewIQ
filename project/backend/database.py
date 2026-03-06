@@ -10,8 +10,9 @@ db_config = {
     "host": os.getenv("DB_HOST", "localhost"),
     "port": int(os.getenv("DB_PORT", 3306)),
     "user": os.getenv("DB_USER", "root"),
-    "password": os.getenv("DB_PASSWORD", "pradeep2006"),
+    "password": os.getenv("DB_PASSWORD", ""),
     "database": os.getenv("DB_NAME", "interviewiq"),
+    "connection_timeout": 5,
 }
 
 # Create connection pool
@@ -37,6 +38,8 @@ def get_connection():
     """Get a connection from the pool"""
     if connection_pool is None:
         init_db()
+    if connection_pool is None:
+        raise RuntimeError("Database is unavailable — check DB_HOST, DB_USER, DB_PASSWORD, DB_NAME env vars")
     return connection_pool.get_connection()
 
 def execute_query(query: str, params: tuple = None, fetch: bool = True):

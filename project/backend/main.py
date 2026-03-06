@@ -44,7 +44,9 @@ app.include_router(reports_router, prefix="/api")
 @app.on_event("startup")
 async def startup():
     """Initialize database on startup"""
-    init_db()
+    import asyncio
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(None, init_db)
     print("""
 ╔═══════════════════════════════════════════════════╗
 ║                                                   ║
