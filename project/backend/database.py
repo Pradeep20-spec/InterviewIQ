@@ -19,7 +19,7 @@ db_config = {
 connection_pool = None
 
 def init_db():
-    """Initialize database connection pool"""
+    """Initialize database connection pool and ensure tables exist"""
     global connection_pool
     try:
         connection_pool = pooling.MySQLConnectionPool(
@@ -29,10 +29,87 @@ def init_db():
             **db_config
         )
         print("✅ Database connection pool created successfully")
+        _ensure_tables()
         return True
     except Exception as e:
         print(f"❌ Database connection failed: {e}")
         return False
+
+
+def _ensure_tables():
+    """Create tables if they don't exist (idempotent)."""
+    conn = connection_pool.get_connection()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS users (
+                id VARCHAR(36) PRIMARY KEY,
+                email VARCHAR(255) UNIQUE,
+                name VARCHAR(255),
+                password_hash VARCHAR(255) NOT NULL DEFAULT '',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS interview_sessions (
+                id VARCHAR(36) PRIMARY KEY,
+                user_id VARCHAR(36),
+                resume_text TEXT,
+                resume_filename VARCHAR(255),
+                personality VARCHAR(50) NOT NULL,
+                status ENUM('in_progress', 'completed', 'abandoned') DEFAULT 'in_progress',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                completed_at TIMESTAMP NULL
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS interview_responses (
+                id VARCHAR(36) PRIMARY KEY,
+                session_id VARCHAR(36) NOT NULL,
+                question_index INT NOT NULL,
+                question TEXT NOT NULL,
+                answer TEXT NOT NULL,
+                input_mode ENUM('text', 'audio', 'video') DEFAULT 'text',
+                recording_duration INT DEFAULT 0,
+                timestamp BIGINT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (session_id) REFERENCES interview_sessions(id) ON DELETE CASCADE
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS performance_results (
+                id VARCHAR(36) PRIMARY KEY,
+                session_id VARCHAR(36) NOT NULL UNIQUE,
+                technical_accuracy DECIMAL(5,2),
+                language_proficiency DECIMAL(5,2),
+                confidence_level DECIMAL(5,2),
+                sentiment_score DECIMAL(5,2),
+                emotional_stability DECIMAL(5,2),
+                overall_score DECIMAL(5,2),
+                feedback TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (session_id) REFERENCES interview_sessions(id) ON DELETE CASCADE
+            )
+        """)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS questions_bank (
+                id VARCHAR(36) PRIMARY KEY,
+                category VARCHAR(50) NOT NULL,
+                personality VARCHAR(50) NOT NULL,
+                question TEXT NOT NULL,
+                difficulty ENUM('easy', 'medium', 'hard') DEFAULT 'medium',
+                is_active BOOLEAN DEFAULT TRUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+        conn.commit()
+        print("✅ Database tables verified")
+    except Exception as e:
+        print(f"⚠️ Table creation warning: {e}")
+    finally:
+        cursor.close()
+        conn.close()
 
 def get_connection():
     """Get a connection from the pool"""
