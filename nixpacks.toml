@@ -1,0 +1,5 @@
+[phases.install]
+cmds = ["pip install -r project/backend/requirements.txt"]
+
+[start]
+cmd = "cd project/backend && uvicorn main:app --host 0.0.0.0 --port $PORT"
