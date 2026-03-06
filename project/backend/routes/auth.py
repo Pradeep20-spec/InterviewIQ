@@ -18,9 +18,12 @@ security = HTTPBearer()
 
 JWT_SECRET = os.getenv("JWT_SECRET", "")
 if not JWT_SECRET:
-    raise RuntimeError(
-        "JWT_SECRET environment variable is not set. "
-        "Add JWT_SECRET=<random-64-char-hex> to your .env file before starting the server."
+    import secrets as _secrets
+    JWT_SECRET = _secrets.token_hex(32)
+    logger.warning(
+        "JWT_SECRET is not set — using a random secret. "
+        "Tokens will be invalidated on restart. "
+        "Set JWT_SECRET in Railway environment variables."
     )
 
 JWT_ALGORITHM = "HS256"
